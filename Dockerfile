@@ -1,32 +1,12 @@
-# Build stage
-FROM golang:1.21-alpine3.19 AS build
-
-WORKDIR /app/build
-
-COPY . .
-
+FROM golang:1.17 AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
 RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -o codespace-backend-api ./cmd/main.go
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o app .
 
-# Publish stage
-FROM alpine:3.19 AS publish
-
-ARG DEFAULT_PORT=80
-
-ENV PORT=${DEFAULT_PORT}
-ENV HTTP_PORT=${DEFAULT_PORT}
-
-ENV HTTP_ADDRESS=0.0.0.0
-ENV TZ=America/Sao_Paulo
-
-EXPOSE ${DEFAULT_PORT}
-
-WORKDIR /api
-
-COPY --from=build /app/build/infra/deploy/entrypoint.sh /api
-COPY --from=build /app/build/codespace-backend-api /api
-
-RUN chmod +x ./codespace-backend-api
-RUN chmod +x ./entrypoint.sh
-
-ENTRYPOINT ["./entrypoint.sh"]
+FROM alpine:latest AS publish
+WORKDIR /root/
+COPY --from=builder /app/app .
+EXPOSE 8080
+CMD ["./app"]
