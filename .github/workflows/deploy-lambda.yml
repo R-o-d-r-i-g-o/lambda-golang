@@ -5,25 +5,38 @@ on:
     branches:
       - main
 
+env:
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+
+permissions:
+  contents: read
+
 jobs:
   deploy:
+    name: Deploy
     runs-on: ubuntu-latest
+    environment: develop
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - name: Set up AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: your-aws-region
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Package function code
-        run: |
-          zip -r function.zip your-function-code
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Deploy Lambda function
+      - name: Build and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          aws lambda update-function-code --function-name your-function-name --zip-file fileb://function.zip
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:latest"
