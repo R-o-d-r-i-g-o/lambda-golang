@@ -36,10 +36,14 @@ func init() {
 	sqsClient = sqs.New(sess)
 	queueURL = os.Getenv("SQS_QUEUE_URL")
 
-	log.Info("finished sign in aws sdk.")
+	log.Info("sign in aws sdk finished.")
 }
 
 func main() {
+	log.Info("start processing.")
+
 	handle := internal.NewHandler(sqsClient, queueURL)
 	lambda.Start(handle.Exec)
+
+	log.Info("process finished.")
 }
